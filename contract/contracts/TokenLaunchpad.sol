@@ -6,6 +6,13 @@ import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router01.sol";
 
+// Deploying TokenLaunchpad contract...
+
+// Deployment Summary:
+// -------------------
+// TokenLaunchpad deployed to: 0xc43B901F4F7cA41293E6Df723F428136211a6D5e
+
+
 contract TokenLaunchpad {
     event TokenSupplyDetails(uint256 currentSupply, uint256 maxSupply, uint256 availableQty);
     event EthRequired(uint256 requiredEth);
