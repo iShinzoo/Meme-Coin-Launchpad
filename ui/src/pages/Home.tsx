@@ -1,11 +1,12 @@
 import 'react-toastify/dist/ReactToastify.css';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { ethers } from 'ethers';
 import { useAccount, useChainId } from 'wagmi';
 import { motion } from 'framer-motion';
 import { toast, ToastContainer } from 'react-toastify';
 import { Navbar } from '../components/Navbar';
+import { Search, Sparkles, ChevronLeft, Rocket, Zap } from 'lucide-react';
 import abi from '../constants/TokenLaunchpad.json';
 import { MemeToken } from '../types';
 import { CONTRACT_ADDRESS, CHAIN_ID } from '../constants/config';
@@ -15,10 +16,24 @@ const Home: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   
   const router = useRouter();
   const { isConnected } = useAccount();
   const chainId = useChainId();
+  const heroRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      setMousePosition({ x: e.clientX, y: e.clientY });
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+    };
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -93,11 +108,42 @@ const Home: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
+    <div className="min-h-screen bg-black text-white overflow-hidden">
+      {/* Animated Background */}
+      <div className="fixed inset-0 z-0">
+        <div className="absolute inset-0 bg-gradient-to-b from-purple-900/20 to-black"></div>
+        {Array.from({ length: 20 }).map((_, i) => (
+          <div
+            key={i}
+            className="absolute rounded-full bg-yellow-500/20 blur-3xl"
+            style={{
+              top: `${Math.random() * 100}%`,
+              left: `${Math.random() * 100}%`,
+              width: `${Math.random() * 300 + 100}px`,
+              height: `${Math.random() * 300 + 100}px`,
+              opacity: Math.random() * 0.5,
+              transform: `translate(-50%, -50%)`,
+              animation: `float ${Math.random() * 10 + 20}s infinite ease-in-out`,
+              animationDelay: `${Math.random() * 5}s`,
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Mouse follower */}
+      <div
+        className="fixed w-40 h-40 rounded-full bg-yellow-500/10 blur-xl pointer-events-none z-0"
+        style={{
+          left: mousePosition.x,
+          top: mousePosition.y,
+          transform: "translate(-50%, -50%)",
+        }}
+      />
+
       <Navbar />
       <ToastContainer position="top-right" autoClose={5000} />
-      
-      <div className="container mx-auto px-4 py-8">
+
+      <div className="container mx-auto px-4 py-8 relative z-10">
         <motion.div 
           className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4"
           initial={{ opacity: 0, y: 20 }}
@@ -107,31 +153,32 @@ const Home: React.FC = () => {
           <div className="w-full md:w-2/3 lg:w-1/2">
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <span>Search</span>
+                <Search className="h-5 w-5 text-yellow-500" />
               </div>
               <input
                 type="text"
                 placeholder="Search by name or symbol..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 shadow-sm"
+                className="w-full pl-10 pr-4 py-3 rounded-xl bg-zinc-900/50 border border-zinc-800 focus:border-yellow-500/50 focus:ring-2 focus:ring-yellow-500/30 text-white placeholder-zinc-500 shadow-sm backdrop-blur-sm"
               />
             </div>
           </div>
           
           <motion.button
             onClick={handleCreateToken}
-            className="w-full md:w-auto px-6 py-3 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2"
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.98 }}
+            className="w-full md:w-auto px-6 py-3 bg-yellow-500 hover:bg-yellow-600 text-black font-bold rounded-full shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
           >
+            <Sparkles className="h-5 w-5" />
             <span>Create New Token</span>
           </motion.button>
         </motion.div>
 
         {loading ? (
           <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-primary-600"></div>
+            <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-yellow-500"></div>
           </div>
         ) : error ? (
           <motion.div 
@@ -139,12 +186,12 @@ const Home: React.FC = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
           >
-            <div className="text-red-500 text-lg mb-4 bg-red-50 px-6 py-4 rounded-lg shadow-sm">
+            <div className="text-red-400 text-lg mb-4 bg-red-900/20 border border-red-800/50 px-6 py-4 rounded-lg backdrop-blur-sm">
               {error}
             </div>
             <motion.button 
               onClick={() => window.location.reload()} 
-              className="px-6 py-2 bg-primary-600 text-white rounded-lg shadow hover:bg-primary-700 transition-colors"
+              className="px-6 py-2 bg-yellow-500 text-black font-bold rounded-full shadow hover:bg-yellow-600 transition-colors"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
@@ -162,7 +209,7 @@ const Home: React.FC = () => {
               <motion.div
                 key={card.tokenAddress}
                 onClick={() => navigateToTokenDetail(card.tokenAddress)}
-                className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:-translate-y-1"
+                className="bg-zinc-900/50 backdrop-blur-sm rounded-xl overflow-hidden border border-zinc-800 hover:border-yellow-500/50 shadow-md hover:shadow-yellow-500/10 transition-all duration-300 cursor-pointer transform hover:-translate-y-2"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
@@ -177,30 +224,30 @@ const Home: React.FC = () => {
                       (e.target as HTMLImageElement).src = '/placeholder.png';
                     }}
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"></div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent"></div>
                   <div className="absolute bottom-0 left-0 p-4">
-                    <span className="bg-primary-600 text-white px-2 py-1 rounded-md text-xs font-semibold">
+                    <span className="bg-yellow-500 text-black px-2 py-1 rounded-full text-xs font-bold">
                       {card.symbol}
                     </span>
                   </div>
                 </div>
                 <div className="p-4">
-                  <h3 className="text-xl font-semibold mb-2 text-gray-800">{card.name}</h3>
-                  <p className="text-gray-500 text-sm line-clamp-2">{card.description}</p>
+                  <h3 className="text-xl font-semibold mb-2 text-white">{card.name}</h3>
+                  <p className="text-zinc-400 text-sm line-clamp-2">{card.description}</p>
                 </div>
               </motion.div>
             ))}
           </motion.div>
         ) : (
           <div className="flex justify-center items-center h-64">
-            <motion.p 
-              className="text-gray-500 text-lg bg-white px-8 py-6 rounded-xl shadow-sm"
+            <motion.div 
+              className="text-zinc-400 text-lg bg-zinc-900/50 backdrop-blur-sm border border-zinc-800 px-8 py-6 rounded-xl shadow-sm"
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.5 }}
             >
-              {searchTerm ? 'No tokens found matching your search.' : 'No tokens available yet.'}
-            </motion.p>
+              {searchTerm ? 'No tokens found matching your search.' : 'No tokens available yet. Be the first to create one!'}
+            </motion.div>
           </div>
         )}
       </div>
