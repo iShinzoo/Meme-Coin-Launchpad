@@ -10,7 +10,7 @@ const queryClient = new QueryClient();
 
 const config = getDefaultConfig({
   appName: 'MemeCoin Launchpad',
-  projectId: process.env.NEXT_PUBLIC_RAINBOW_PROJECT || '',
+  projectId: 'd1907ce9b4565853d18b3413ce5f7ad2',
   chains: [sepolia],
   ssr: true,
   transports: {
