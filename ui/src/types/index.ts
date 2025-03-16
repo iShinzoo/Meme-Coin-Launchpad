@@ -11,3 +11,17 @@ export interface TokenLaunchpadContract {
   buyMemeToken: (tokenAddress: string, amount: number, options: { value: bigint }) => Promise<any>;
   getAllMemeTokens: () => Promise<MemeToken[]>;
 }
+
+export interface Meme {
+  id: string;
+  title: string;
+  url: string;
+  author: string;
+  subreddit: string;
+  score: number;
+}
+
+export interface MemeResponse {
+  memes: Meme[];
+  after?: string;
+}

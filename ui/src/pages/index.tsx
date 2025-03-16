@@ -179,11 +179,11 @@ export default function Home() {
           transition={{ delay: 1, duration: 0.6 }}
         >
           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+          </motion.div>
+          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
             <motion.button
-              // navigation logic
-
               onClick={() => router.push("Home")}
-              className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold text-lg rounded-full px-8 py-6"
+              className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold text-lg rounded-full px-8 py-6 mt-4"
             >
               Launch Your Memecoin
             </motion.button>
@@ -404,7 +404,9 @@ export default function Home() {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
-              <motion.button className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold text-lg rounded-full px-10 py-6">
+              <motion.button 
+              onClick={() => router.push("/page")}
+              className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold text-lg rounded-full px-10 py-6">
                 Get Started Now
               </motion.button>
             </motion.div>
