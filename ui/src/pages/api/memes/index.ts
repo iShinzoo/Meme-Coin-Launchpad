@@ -22,70 +22,42 @@ interface Meme {
 const cache = new Map<string, { memes: Meme[]; timestamp: number }>();
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
-// Add these environment variables in your Vercel dashboard and .env.local file
-const CLIENT_ID = process.env.NEXT_PUBLIC_REDDIT_CLIENT_ID;
-const CLIENT_SECRET = process.env.NEXT_PUBLIC_REDDIT_CLIENT_SECRET;
-const REDDIT_USERNAME = process.env.NEXT_PUBLIC_REDDIT_USERNAME;
-const REDDIT_PASSWORD = process.env.NEXT_PUBLIC_REDDIT_PASSWORD;
-
-async function getRedditAccessToken() {
-  const basic = Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString('base64');
-  
-  try {
-    const response = await fetch('https://www.reddit.com/api/v1/access_token', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Basic ${basic}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'User-Agent': 'MyMemeApp/1.0 by iShinzoo_krsna'
-      },
-      body: `grant_type=password&username=${REDDIT_USERNAME}&password=${REDDIT_PASSWORD}`
-    });
-
-    const data = await response.json();
-    return data.access_token;
-  } catch (error) {
-    console.error('Error getting Reddit access token:', error);
-    return null;
-  }
-}
+const alternativeProxies = [
+  'https://api.allorigins.win/raw',
+  'https://proxy.cors.sh',
+  'https://api.codetabs.com/v1/proxy',
+  'https://corsproxy.io'
+];
 
 async function fetchSubredditMemes(subreddit: string): Promise<Meme[]> {
   try {
-    // Use Reddit's public JSON API with a more browser-like request
-    const response = await fetch(`https://www.reddit.com/r/${subreddit}/hot/.json?limit=50`, {
+    // Use a more reliable proxy service
+    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://www.reddit.com/r/${subreddit}/hot.json`)}`;
+    
+    const response = await fetch(proxyUrl, {
+      method: 'GET',
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'application/json, text/plain, */*',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Sec-Fetch-Dest': 'empty',
-        'Sec-Fetch-Mode': 'cors',
-        'Sec-Fetch-Site': 'same-origin',
-        'Pragma': 'no-cache',
-        'Cache-Control': 'no-cache'
-      }
+        'User-Agent': 'Mozilla/5.0 (compatible; MyMemeApp/1.0;)',
+      },
     });
 
-    // If we get a 403, try with a delay and different user agent
-    if (response.status === 403) {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      const retryResponse = await fetch(`https://www.reddit.com/r/${subreddit}/hot/.json?limit=50`, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Safari/605.1.15',
-          'Accept': 'application/json',
-        }
-      });
-      
-      if (!retryResponse.ok) {
-        throw new Error(`Retry failed with status: ${retryResponse.status}`);
-      }
-      
-      const data = await retryResponse.json();
-      return processRedditData(data, subreddit);
-    }
-
     if (!response.ok) {
-      throw new Error(`Initial request failed with status: ${response.status}`);
+      // Try alternative proxy if first one fails
+      const backupProxyUrl = `https://proxy.cors.sh/${encodeURIComponent(`https://www.reddit.com/r/${subreddit}/hot.json`)}`;
+      const backupResponse = await fetch(backupProxyUrl, {
+        method: 'GET',
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; MyMemeApp/1.0;)',
+          'x-cors-api-key': 'temp_' + Math.random().toString(36).substr(2, 9),
+        },
+      });
+
+      if (!backupResponse.ok) {
+        throw new Error(`Both proxy attempts failed for ${subreddit}`);
+      }
+
+      const data = await backupResponse.json();
+      return processRedditData(data, subreddit);
     }
 
     const data = await response.json();
@@ -93,7 +65,25 @@ async function fetchSubredditMemes(subreddit: string): Promise<Meme[]> {
 
   } catch (error) {
     console.error(`Error fetching memes from ${subreddit}:`, error);
-    return [];
+    
+    // Last resort: try direct fetch with minimal headers
+    try {
+      const directResponse = await fetch(`https://www.reddit.com/r/${subreddit}/hot.json`, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0',
+        }
+      });
+
+      if (!directResponse.ok) {
+        return [];
+      }
+
+      const data = await directResponse.json();
+      return processRedditData(data, subreddit);
+    } catch (directError) {
+      console.error(`Direct fetch failed for ${subreddit}:`, directError);
+      return [];
+    }
   }
 }
 
@@ -140,6 +130,7 @@ function processRedditData(data: any, subreddit: string): Meme[] {
   }
 }
 
+// Update the handler to use sequential requests instead of parallel
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -157,33 +148,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
-    let attempts = 0;
     let allMemes: Meme[] = [];
-    const maxAttempts = 5; // Increase max attempts
+    const maxAttempts = 3;
+    let attempts = 0;
 
     while (attempts < maxAttempts && allMemes.length === 0) {
-      // Get different subreddits each attempt
+      // Get random subreddits
       const selectedSubreddits = [...new Set(
         Array.from({ length: 3 }, () => 
           SUBREDDITS[Math.floor(Math.random() * SUBREDDITS.length)]
         )
       )];
 
-      // Add delay between attempts
-      if (attempts > 0) {
-        await new Promise(resolve => setTimeout(resolve, 2000));
+      // Sequential requests instead of parallel
+      for (const subreddit of selectedSubreddits) {
+        if (allMemes.length >= 50) break; // Stop if we have enough memes
+
+        // Add delay between requests
+        if (allMemes.length > 0) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+
+        const memes = await fetchSubredditMemes(subreddit);
+        allMemes = [...allMemes, ...memes];
       }
 
-      const results = await Promise.all(
-        selectedSubreddits.map(async subreddit => {
-          // Add small delay between subreddit requests
-          await new Promise(resolve => setTimeout(resolve, 500));
-          return fetchSubredditMemes(subreddit);
-        })
-      );
-
-      allMemes = results.flat();
       attempts++;
+      
+      if (allMemes.length === 0 && attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
     }
 
     if (allMemes.length === 0) {
