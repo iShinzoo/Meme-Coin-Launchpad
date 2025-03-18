@@ -37,7 +37,7 @@ async function getRedditAccessToken() {
       headers: {
         'Authorization': `Basic ${basic}`,
         'Content-Type': 'application/x-www-form-urlencoded',
-        'User-Agent': 'MyMemeApp/1.0 by YourRedditUsername'
+        'User-Agent': 'MyMemeApp/1.0 by iShinzoo_krsna'
       },
       body: `grant_type=password&username=${REDDIT_USERNAME}&password=${REDDIT_PASSWORD}`
     });
@@ -52,9 +52,9 @@ async function getRedditAccessToken() {
 
 async function fetchSubredditMemes(subreddit: string): Promise<Meme[]> {
   try {
-    const response = await fetch(`https://www.reddit.com/r/${subreddit}/hot.json?limit=50`, {
+    const response = await fetch(`https://api.codetabs.com/v1/proxy?quest=https://www.reddit.com/r/${subreddit}/hot.json?limit=50`, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       }
     });
 
