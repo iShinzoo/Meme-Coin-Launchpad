@@ -17,7 +17,16 @@ const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 async function fetchSubredditMemes(subreddit: string): Promise<Meme[]> {
   try {
-    const response = await fetch(`https://www.reddit.com/r/${subreddit}/hot.json?limit=50`);
+    const response = await fetch(`https://www.reddit.com/r/${subreddit}/hot.json?limit=50`, {
+      headers: {
+        'User-Agent': 'MyMemeApp/1.0 (contact@example.com)' // Replace with your contact info
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
     const data = await response.json();
 
     return data.data.children
