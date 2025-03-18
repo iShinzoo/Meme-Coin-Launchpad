@@ -22,13 +22,40 @@ interface Meme {
 const cache = new Map<string, { memes: Meme[]; timestamp: number }>();
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
+// Add these environment variables in your Vercel dashboard and .env.local file
+const CLIENT_ID = process.env.NEXT_PUBLIC_REDDIT_CLIENT_ID;
+const CLIENT_SECRET = process.env.NEXT_PUBLIC_REDDIT_CLIENT_SECRET;
+const REDDIT_USERNAME = process.env.NEXT_PUBLIC_REDDIT_USERNAME;
+const REDDIT_PASSWORD = process.env.NEXT_PUBLIC_REDDIT_PASSWORD;
+
+async function getRedditAccessToken() {
+  const basic = Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString('base64');
+  
+  try {
+    const response = await fetch('https://www.reddit.com/api/v1/access_token', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${basic}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'User-Agent': 'MyMemeApp/1.0 by YourRedditUsername'
+      },
+      body: `grant_type=password&username=${REDDIT_USERNAME}&password=${REDDIT_PASSWORD}`
+    });
+
+    const data = await response.json();
+    return data.access_token;
+  } catch (error) {
+    console.error('Error getting Reddit access token:', error);
+    return null;
+  }
+}
+
 async function fetchSubredditMemes(subreddit: string): Promise<Meme[]> {
   try {
     const response = await fetch(`https://www.reddit.com/r/${subreddit}/hot.json?limit=50`, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; MyMemeApp/1.0;)'
-      },
-      next: { revalidate: 60 } // Cache for 1 minute
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      }
     });
 
     if (!response.ok) {
