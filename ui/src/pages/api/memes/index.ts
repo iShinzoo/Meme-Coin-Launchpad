@@ -15,16 +15,37 @@ const SUBREDDITS = [
 const cache = new Map<string, { memes: Meme[]; timestamp: number }>();
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
+async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 3) {
+  let retryCount = 0;
+  while (retryCount < maxRetries) {
+    try {
+      const response = await fetch(url, options);
+      return response;
+    } catch (error) {
+      retryCount++;
+      if (retryCount >= maxRetries) {
+        throw error;
+      }
+      await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+    }
+  }
+}
+
 async function fetchSubredditMemes(subreddit: string): Promise<Meme[]> {
   try {
-    const response = await fetch(`https://www.reddit.com/r/${subreddit}/hot.json?limit=50`, {
+    const response = await fetchWithRetry(`https://www.reddit.com/r/${subreddit}/hot.json?limit=50`, {
       headers: {
         'User-Agent': 'MyMemeApp/1.0 (contact@example.com)' // Replace with your contact info
       }
     });
 
+    if (!response) {
+      throw new Error('No response received from fetch request');
+    }
+
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      const errorText = await response.text();
+      throw new Error(`HTTP error! status: ${response.status} ${response.statusText}\nResponse body: ${errorText}`);
     }
 
     const data = await response.json();
@@ -50,6 +71,7 @@ async function fetchSubredditMemes(subreddit: string): Promise<Meme[]> {
     throw error;
   }
 }
+
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*');
