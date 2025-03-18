@@ -16,27 +16,30 @@ const cache = new Map<string, { memes: Meme[]; timestamp: number }>();
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 async function fetchSubredditMemes(subreddit: string): Promise<Meme[]> {
-  const response = await fetch(
-    `https://www.reddit.com/r/${subreddit}/hot.json?limit=50`
-  );
-  const data = await response.json();
+  try {
+    const response = await fetch(`https://www.reddit.com/r/${subreddit}/hot.json?limit=50`);
+    const data = await response.json();
 
-  return data.data.children
-    .filter((post: any) => {
-      const url = post.data.url.toLowerCase();
-      return (
-        !post.data.over_18 &&
-        (url.endsWith('.jpg') || url.endsWith('.png') || url.endsWith('.gif'))
-      );
-    })
-    .map((post: any) => ({
-      id: post.data.id,
-      title: post.data.title,
-      url: post.data.url,
-      author: post.data.author,
-      subreddit: post.data.subreddit,
-      score: post.data.score
-    }));
+    return data.data.children
+      .filter((post: any) => {
+        const url = post.data.url.toLowerCase();
+        return (
+          !post.data.over_18 &&
+          (url.endsWith('.jpg') || url.endsWith('.png') || url.endsWith('.gif'))
+        );
+      })
+      .map((post: any) => ({
+        id: post.data.id,
+        title: post.data.title,
+        url: post.data.url,
+        author: post.data.author,
+        subreddit: post.data.subreddit,
+        score: post.data.score
+      }));
+  } catch (error) {
+    console.error(`Error fetching memes from ${subreddit}:`, error);
+    throw error;
+  }
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
