@@ -52,46 +52,27 @@ async function getRedditAccessToken() {
 
 async function fetchSubredditMemes(subreddit: string): Promise<Meme[]> {
   try {
-    // Try multiple proxy services in case one fails
-    const proxyUrls = [
-      `https://corsproxy.io/?${encodeURIComponent(`https://www.reddit.com/r/${subreddit}/hot.json?limit=50`)}`,
-      `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://www.reddit.com/r/${subreddit}/hot.json?limit=50`)}`,
-      `https://api.codetabs.com/v1/proxy?quest=https://www.reddit.com/r/${subreddit}/hot.json?limit=50`
-    ];
-
-    let response;
-    let success = false;
-    let error;
-
-    // Try each proxy until one works
-    for (const proxyUrl of proxyUrls) {
-      try {
-        response = await fetch(proxyUrl, {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-          },
-          next: {
-            revalidate: 300 // Cache for 5 minutes
-          }
-        });
-
-        if (response.ok) {
-          success = true;
-          break;
-        }
-      } catch (e) {
-        error = e;
-        console.error(`Proxy ${proxyUrl} failed:`, e);
-        continue;
+    // Try direct Reddit API first
+    const response = await fetch(`https://www.reddit.com/r/${subreddit}/hot.json?limit=50`, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      },
+      next: {
+        revalidate: 300 // Cache for 5 minutes
       }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Reddit API failed with status: ${response.status}`);
     }
 
-    if (!success) {
-      console.error(`All proxies failed for ${subreddit}`, error);
-      return [];
+    // Verify we're getting JSON, not HTML
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      throw new Error('Invalid content type received');
     }
 
-    const data = await response!.json();
+    const data = await response.json();
     
     if (!data?.data?.children) {
       console.error(`Unexpected response structure from ${subreddit}`);
@@ -131,7 +112,57 @@ async function fetchSubredditMemes(subreddit: string): Promise<Meme[]> {
 
   } catch (error) {
     console.error(`Error fetching memes from ${subreddit}:`, error);
-    return [];
+    
+    // Fallback to using Reddit's JSON endpoint
+    try {
+      const jsonResponse = await fetch(`https://www.reddit.com/r/${subreddit}/hot/.json?limit=50`, {
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+
+      if (!jsonResponse.ok) {
+        return [];
+      }
+
+      const data = await jsonResponse.json();
+      
+      if (!data?.data?.children) {
+        return [];
+      }
+
+      return data.data.children
+        .filter((post: any) => {
+          const url = post.data.url.toLowerCase();
+          return (
+            !post.data.over_18 &&
+            (url.endsWith('.jpg') || 
+             url.endsWith('.png') || 
+             url.endsWith('.gif') ||
+             url.includes('imgur.com') ||
+             url.includes('i.redd.it'))
+          );
+        })
+        .map((post: any) => ({
+          id: post.data.id,
+          title: post.data.title,
+          url: post.data.url,
+          author: post.data.author,
+          subreddit: post.data.subreddit,
+          score: post.data.score
+        }))
+        .filter((meme: Meme) => {
+          try {
+            new URL(meme.url);
+            return true;
+          } catch {
+            return false;
+          }
+        });
+    } catch (fallbackError) {
+      console.error(`Fallback fetch failed for ${subreddit}:`, fallbackError);
+      return [];
+    }
   }
 }
 
