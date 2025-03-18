@@ -30,70 +30,69 @@ const alternativeProxies = [
 ];
 
 async function fetchSubredditMemes(subreddit: string): Promise<Meme[]> {
-  try {
-    // Use a more reliable proxy service
-    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://www.reddit.com/r/${subreddit}/hot.json`)}`;
-    
-    const response = await fetch(proxyUrl, {
-      method: 'GET',
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; MyMemeApp/1.0;)',
-      },
-    });
+  const proxyUrls = [
+    // Try direct Reddit JSON endpoint first
+    `https://www.reddit.com/r/${subreddit}/hot.json`,
+    // Then try different proxies
+    `https://corsproxy.io/?${encodeURIComponent(`https://www.reddit.com/r/${subreddit}/hot.json`)}`,
+    `https://api.allorigins.win/get?url=${encodeURIComponent(`https://www.reddit.com/r/${subreddit}/hot.json`)}`,
+    `https://api.codetabs.com/v1/proxy?quest=https://www.reddit.com/r/${subreddit}/hot.json`
+  ];
 
-    if (!response.ok) {
-      // Try alternative proxy if first one fails
-      const backupProxyUrl = `https://proxy.cors.sh/${encodeURIComponent(`https://www.reddit.com/r/${subreddit}/hot.json`)}`;
-      const backupResponse = await fetch(backupProxyUrl, {
-        method: 'GET',
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; MyMemeApp/1.0;)',
-          'x-cors-api-key': 'temp_' + Math.random().toString(36).substr(2, 9),
-        },
-      });
-
-      if (!backupResponse.ok) {
-        throw new Error(`Both proxy attempts failed for ${subreddit}`);
-      }
-
-      const data = await backupResponse.json();
-      return processRedditData(data, subreddit);
-    }
-
-    const data = await response.json();
-    return processRedditData(data, subreddit);
-
-  } catch (error) {
-    console.error(`Error fetching memes from ${subreddit}:`, error);
-    
-    // Last resort: try direct fetch with minimal headers
+  for (const url of proxyUrls) {
     try {
-      const directResponse = await fetch(`https://www.reddit.com/r/${subreddit}/hot.json`, {
+      const response = await fetch(url, {
         headers: {
-          'User-Agent': 'Mozilla/5.0',
+          'Accept': 'application/json',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
         }
       });
 
-      if (!directResponse.ok) {
-        return [];
+      if (!response.ok) {
+        console.warn(`Failed to fetch from ${url.split('?')[0]}, status: ${response.status}`);
+        continue;
       }
 
-      const data = await directResponse.json();
-      return processRedditData(data, subreddit);
-    } catch (directError) {
-      console.error(`Direct fetch failed for ${subreddit}:`, directError);
-      return [];
+      const contentType = response.headers.get('content-type');
+      if (!contentType?.includes('application/json')) {
+        console.warn(`Invalid content type from ${url.split('?')[0]}: ${contentType}`);
+        continue;
+      }
+
+      const rawData = await response.json();
+      
+      // Handle different proxy response structures
+      let data;
+      if (url.includes('allorigins.win')) {
+        data = JSON.parse(rawData.contents); // allorigins wraps content in .contents
+      } else {
+        data = rawData;
+      }
+
+      if (!data?.data?.children) {
+        console.warn(`Invalid data structure from ${url.split('?')[0]}`);
+        continue;
+      }
+
+      const memes = processRedditData(data, subreddit);
+      if (memes.length > 0) {
+        return memes;
+      }
+
+    } catch (error) {
+      console.error(`Error with ${url.split('?')[0]}:`, error);
+      continue;
     }
+
+    // Add delay before trying next proxy
+    await new Promise(resolve => setTimeout(resolve, 500));
   }
+
+  return []; // Return empty array if all attempts fail
 }
 
 // Helper function to process Reddit data
 function processRedditData(data: any, subreddit: string): Meme[] {
-  if (!data?.data?.children) {
-    console.error(`Unexpected response structure from ${subreddit}`);
-    return [];
-  }
-
   try {
     return data.data.children
       .filter((post: any) => {
@@ -130,7 +129,7 @@ function processRedditData(data: any, subreddit: string): Meme[] {
   }
 }
 
-// Update the handler to use sequential requests instead of parallel
+// Update the handler function to use longer delays and better error handling
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -155,18 +154,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     while (attempts < maxAttempts && allMemes.length === 0) {
       // Get random subreddits
       const selectedSubreddits = [...new Set(
-        Array.from({ length: 3 }, () => 
+        Array.from({ length: 2 }, () => // Reduced to 2 subreddits per attempt
           SUBREDDITS[Math.floor(Math.random() * SUBREDDITS.length)]
         )
       )];
 
-      // Sequential requests instead of parallel
+      // Sequential requests with longer delays
       for (const subreddit of selectedSubreddits) {
-        if (allMemes.length >= 50) break; // Stop if we have enough memes
+        if (allMemes.length >= 50) break;
 
-        // Add delay between requests
+        // Longer delay between subreddit requests
         if (allMemes.length > 0) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          await new Promise(resolve => setTimeout(resolve, 2000));
         }
 
         const memes = await fetchSubredditMemes(subreddit);
@@ -176,7 +175,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       attempts++;
       
       if (allMemes.length === 0 && attempts < maxAttempts) {
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        // Longer delay between attempts
+        await new Promise(resolve => setTimeout(resolve, 3000));
       }
     }
 
