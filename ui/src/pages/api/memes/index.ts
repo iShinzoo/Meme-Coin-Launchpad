@@ -55,7 +55,10 @@ async function fetchSubredditMemes(subreddit: string): Promise<Meme[]> {
     // Try direct Reddit API first
     const response = await fetch(`https://www.reddit.com/r/${subreddit}/hot.json?limit=50`, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'application/json',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
       },
       next: {
         revalidate: 300 // Cache for 5 minutes
