@@ -95,10 +95,10 @@ export default function Home() {
             FEATURES
           </Link>
           <Link
-            href="#launch"
+            href="#exploreMeme"
             className="text-sm hover:text-yellow-500 transition-colors"
           >
-            LAUNCH
+            EXPLORE MEMES
           </Link>
         </motion.nav>
       </header>
@@ -366,7 +366,7 @@ export default function Home() {
 
       {/* CTA Section */}
       <section
-        id="launch"
+        id="exploreMeme"
         className="container mx-auto py-24 px-4 relative z-10"
       >
         <motion.div
@@ -384,7 +384,7 @@ export default function Home() {
               viewport={{ once: true }}
               transition={{ duration: 0.6, delay: 0.2 }}
             >
-              Ready to Launch Your Memecoin?
+              Spot Viral Memes. Launch Instant Coins.
             </motion.h2>
             <motion.p
               className="text-xl text-zinc-300 mb-10"
@@ -393,8 +393,7 @@ export default function Home() {
               viewport={{ once: true }}
               transition={{ duration: 0.6, delay: 0.4 }}
             >
-              Join the Pump.flawk launchpad today and create the next viral
-              sensation in the crypto world.
+              Jump into the heart of meme culture with Pump.flawk Launchpad—where internet trends become crypto gold.
             </motion.p>
             <motion.div
               initial={{ opacity: 0, y: 20 }}
