@@ -44,7 +44,7 @@ const TokenCreate: React.FC = () => {
 
       const receipt = await transaction.wait()
       toast.success("Token created successfully!")
-      router.push("/")
+      router.push("/Home")
     } catch (error: any) {
       console.error("Error creating token:", error)
       if (error.code === "ACTION_REJECTED") {
@@ -70,7 +70,7 @@ const TokenCreate: React.FC = () => {
           className="max-w-2xl mx-auto"
         >
           <motion.button
-            onClick={() => router.push("/")}
+            onClick={() => router.push("/Home")}
             className="flex items-center space-x-2 text-yellow-500 mb-6 hover:text-yellow-400 transition-colors"
             whileHover={{ x: -5 }}
           >

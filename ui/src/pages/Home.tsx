@@ -10,6 +10,7 @@ import { Search, Sparkles, ChevronLeft, Rocket, Zap } from 'lucide-react';
 import abi from '../constants/TokenLaunchpad.json';
 import { MemeToken } from '../types';
 import { CONTRACT_ADDRESS, CHAIN_ID } from '../constants/config';
+import Image from 'next/image';
 
 const Home: React.FC = () => {
   const [cards, setCards] = useState<MemeToken[]>([]);
@@ -17,6 +18,8 @@ const Home: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [tokenImage, setTokenImage] = useState<string>('');
+  const [tokenImages, setTokenImages] = useState<Map<string, string>>(new Map());
   
   const router = useRouter();
   const { isConnected } = useAccount();
@@ -82,6 +85,32 @@ const Home: React.FC = () => {
     };
   }, []);
 
+  useEffect(() => {
+    // Check for token image in localStorage
+    const savedTokenImage = localStorage.getItem('tokenImage');
+    if (savedTokenImage) {
+      setTokenImage(savedTokenImage);
+    }
+  }, []);
+
+  useEffect(() => {
+    // Load created tokens from localStorage
+    const loadCreatedTokens = () => {
+      try {
+        const savedTokens = JSON.parse(localStorage.getItem('createdTokens') || '[]');
+        const imageMap = new Map();
+        savedTokens.forEach((token: { address: string; imageUrl: string }) => {
+          imageMap.set(token.address, token.imageUrl);
+        });
+        setTokenImages(imageMap);
+      } catch (error) {
+        console.error('Error loading token images:', error);
+      }
+    };
+
+    loadCreatedTokens();
+  }, []);
+
   const handleCreateToken = () => {
     if (!isConnected) {
       toast.error('Please connect your wallet first');
@@ -106,6 +135,10 @@ const Home: React.FC = () => {
     card.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     card.symbol.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const getTokenImage = (tokenAddress: string): string => {
+    return tokenImages.get(tokenAddress) || '/coin.png';
+  };
 
   return (
     <div className="min-h-screen bg-black text-white overflow-hidden">
@@ -216,13 +249,17 @@ const Home: React.FC = () => {
                 whileHover={{ scale: 1.02 }}
               >
                 <div className="relative aspect-w-16 aspect-h-9">
-                  <img 
-                    src={card.imageUrl} 
+                  <Image
+                    src={card.imageUrl || '/coin.png'}
                     alt={card.name}
+                    width={400}
+                    height={300}
                     className="object-cover w-full h-48"
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src = '/placeholder.png';
+                      const target = e.target as HTMLImageElement;
+                      target.src = '/coin.png';
                     }}
+                    unoptimized
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent"></div>
                   <div className="absolute bottom-0 left-0 p-4">
@@ -248,6 +285,63 @@ const Home: React.FC = () => {
             >
               {searchTerm ? 'No tokens found matching your search.' : 'No tokens available yet. Be the first to create one!'}
             </motion.div>
+          </div>
+        )}
+
+        {/* Show token image if available */}
+        {tokenImage && (
+          <div className="mt-4">
+            <h2>Your Token Image</h2>
+            <Image
+              src={tokenImage || '/coin-placeholder.png'}
+              alt="Token Image"
+              width={300}
+              height={300}
+              className="rounded-lg"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.src = '/coin-placeholder.png';
+              }}
+              unoptimized
+            />
+          </div>
+        )}
+
+        {/* Show recently created token section */}
+        {tokenImages.size > 0 && (
+          <div className="mt-8">
+            <h2 className="text-2xl font-bold mb-4">Your Recently Created Tokens</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {Array.from(tokenImages).map(([address, imageUrl], index) => {
+                const token = cards.find(card => card.tokenAddress === address);
+                if (!token) return null;
+
+                return (
+                  <motion.div
+                    key={address}
+                    className="bg-zinc-900/50 backdrop-blur-sm rounded-xl p-4 border border-yellow-500/30"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                  >
+                    <Image
+                      src={imageUrl}
+                      alt={token.name}
+                      width={200}
+                      height={200}
+                      className="rounded-lg mb-4"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = '/coin.png';
+                      }}
+                      unoptimized
+                    />
+                    <h3 className="text-lg font-semibold">{token.name}</h3>
+                    <p className="text-sm text-zinc-400">{token.symbol}</p>
+                  </motion.div>
+                );
+              })}
+            </div>
           </div>
         )}
       </div>

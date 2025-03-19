@@ -1,13 +1,22 @@
-module.exports = {
-  async headers() {
-    return [
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  images: {
+    domains: [
+      'i.redd.it',
+      'i.imgur.com',
+      'preview.redd.it',
+      'external-preview.redd.it',
+      'ipfs.io',
+      'gateway.pinata.cloud'
+    ],
+    remotePatterns: [
       {
-        source: '/api/:path*',
-        headers: [
-          { key: 'Access-Control-Allow-Origin', value: '*' },
-          { key: 'Access-Control-Allow-Methods', value: 'GET' }
-        ],
+        protocol: 'https',
+        hostname: '**',
       },
-    ]
+    ],
+    unoptimized: true
   },
-} 
+}
+
+module.exports = nextConfig 

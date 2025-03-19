@@ -13,6 +13,7 @@ import abi from "../../constants/TokenLaunchpad.json"
 import tokenabi from "../../constants/Token.json"
 import { CONTRACT_ADDRESS, CHAIN_ID } from "../../constants/config"
 import { ArrowLeft, Rocket, X } from "lucide-react"
+import Image from 'next/image'
 
 interface TokenData {
   name: string
@@ -133,7 +134,7 @@ const TokenDetail: React.FC = () => {
       await transaction.wait()
       toast.success("Tokens purchased successfully!")
 
-      setTimeout(() => router.push("/"), 2000)
+      setTimeout(() => router.push("/Home"), 2000)
     } catch (error: any) {
       console.error("Error purchasing tokens:", error)
       toast.error(error.message || "Error purchasing tokens. Please try again.")
@@ -162,7 +163,7 @@ const TokenDetail: React.FC = () => {
           <div className="text-center text-red-400 bg-red-900/20 p-6 rounded-xl border border-red-800 max-w-md mx-auto">
             {error}
             <motion.button
-              onClick={() => router.push("/")}
+              onClick={() => router.push("/Home")}
               className="mt-4 px-6 py-2 bg-yellow-500 text-black rounded-lg shadow hover:bg-yellow-600 transition-colors flex items-center gap-2 mx-auto"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -190,7 +191,7 @@ const TokenDetail: React.FC = () => {
         >
           {/* Back Button */}
           <motion.button
-            onClick={() => router.push("/")}
+            onClick={() => router.push("/Home")}
             className="flex items-center space-x-2 text-yellow-500 mb-6 hover:text-yellow-400 transition-colors"
             whileHover={{ x: -5 }}
           >
@@ -207,12 +208,15 @@ const TokenDetail: React.FC = () => {
               transition={{ delay: 0.2 }}
             >
               <div className="relative mb-4">
-                <img
-                  src={tokenData.imageUrl || "/placeholder.svg"}
+                <Image
+                  src={tokenData.imageUrl || '/coin.png'}
                   alt={tokenData.name}
+                  width={400}
+                  height={400}
                   className="h-40 w-full object-cover rounded-lg"
                   onError={(e) => {
-                    ;(e.target as HTMLImageElement).src = "/placeholder.png"
+                    const target = e.target as HTMLImageElement
+                    target.src = '/coin.png'
                   }}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent rounded-lg"></div>
