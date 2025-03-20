@@ -293,14 +293,14 @@ const Home: React.FC = () => {
           <div className="mt-4">
             <h2>Your Token Image</h2>
             <Image
-              src={tokenImage || '/coin-placeholder.png'}
+              src={tokenImage || '/coin.png'}
               alt="Token Image"
               width={300}
               height={300}
               className="rounded-lg"
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
-                target.src = '/coin-placeholder.png';
+                target.src = '/coin.png';
               }}
               unoptimized
             />
